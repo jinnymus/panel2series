@@ -1,0 +1,40 @@
+services:
+  grafana:
+    image: grafana/grafana:11.5.2
+    networks: [front, back]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:?}
+      GF_SERVER_PROTOCOL: https
+      GF_SERVER_CERT_FILE: /tls/cert.pem
+      GF_SERVER_CERT_KEY: /tls/key.pem
+    volumes:
+      - ${TLS_DIR:?}:/tls:ro
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    networks: [back]
+    volumes:
+      - ./fixture.om:/tmp/fixture.om:ro
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        promtool tsdb create-blocks-from openmetrics /tmp/fixture.om /prometheus
+        exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus
+  influx:
+    image: influxdb:1.8.10
+    networks: [back]
+  client:
+    image: python:3.10-slim
+    networks: [front]
+    environment:
+      SSL_CERT_FILE: /cert.pem
+      GRAFANA_PASSWORD: ${VIEWER_PASSWORD:?}
+    volumes:
+      - ${TLS_DIR}/cert.pem:/cert.pem:ro
+      - ../panel2series.py:/app/panel2series.py:ro
+      - ./check.py:/app/check.py:ro
+      - ${RESULT_DIR:?}:/out
+    working_dir: /app
+    entrypoint: [python, -B]
+networks:
+  front: {internal: true}
+  back: {internal: true}

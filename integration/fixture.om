@@ -1,0 +1,5 @@
+# TYPE demo_depth gauge
+demo_depth{queue="demo"} 2 1704067200
+demo_depth{queue="demo"} 7 1704067260
+demo_depth{queue="demo"} 4 1704067320
+# EOF

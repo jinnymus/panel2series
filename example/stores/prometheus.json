@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "dashboard": "stores",
+  "panel": 1,
+  "title": "prometheus queue depth",
+  "refId": "A",
+  "window_ms": [
+    1704067200000,
+    1704067320000
+  ],
+  "labels": {
+    "__name__": "demo_depth",
+    "queue": "demo"
+  },
+  "unit": null,
+  "points": [
+    [
+      1704067200000,
+      2
+    ],
+    [
+      1704067260000,
+      7
+    ],
+    [
+      1704067320000,
+      4
+    ]
+  ]
+}

@@ -19,3 +19,9 @@ Supply GRAFANA_PASSWORD through the environment. The account needs Basic authent
 Time boundaries and point timestamps are Unix milliseconds. Schema version 1 contains the requested window, dashboard and panel identifiers, query refId, title, labels, configured panel unit and timestamp/value pairs. A null value breaks the line.
 
 Validated scope: Grafana 11.5.2, TestData CSV Content, one top-level panel with one time column and one numeric column, Basic authentication. The first slice handles static query targets. See [the roadmap](PLAN.md) for additional sources, versions, variable resolution and SSO.
+
+## Prometheus and InfluxDB integration check
+
+Run `bash integration/run.sh` with Docker Compose, Python 3 and OpenSSL supporting `req -addext`. Pass an output directory as the first argument to keep the generated JSON and SVG elsewhere.
+
+The fixture imports three samples into Prometheus v3.15.1 and inserts a distinct series into InfluxDB 1.8.10. Grafana 11.5.2 joins two internal networks. The exporter joins only the frontend network and authenticates over HTTPS as a Viewer. The test probes both backend IPs from the client network, compares every timestamp and value, and runs each SVG render in a container with networking disabled. The InfluxQL fixture uses a fixed UTC window. All ports remain unpublished and the temporary stack is removed on exit.
