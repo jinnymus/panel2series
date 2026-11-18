@@ -1,0 +1,12 @@
+defaults:
+  panel: 'body'
+  plot: 'canvas:visible >> nth=0'
+  download: 'button:has-text("Download CSV")'
+  options: 'text=Data options'
+  transform: 'text=Apply panel transformations >> xpath=ancestor::*[descendant::input[@type="checkbox"]][1]//input[@type="checkbox"]'
+versions:
+  "13":
+    header: '[data-testid={header}]'
+    menu: '[data-testid={menu}]'
+    inspect: 'text="Inspect"'
+    inspect_data: 'text="Data"'

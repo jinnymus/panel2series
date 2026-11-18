@@ -1,0 +1,2 @@
+# Example site override, exercised by the browser matrix.
+download: 'role=button[name="Download CSV"i]'

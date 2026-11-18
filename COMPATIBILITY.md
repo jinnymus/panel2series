@@ -19,4 +19,6 @@ Every row uses a Viewer on a separate internal network. The test checks that the
 
 ## Coverage limits
 
-The suite uses classic dashboards, the default namespace, one numeric series per successful query and literal UTC windows. Dashboard resource API versions and bundle schema versions are independent. Other patch releases, native dashboard schema v2 layouts, non-default organizations, Grafana Cloud, SSO, browser capture, Flux, multi-select variables and queries that depend on sibling refIds require separate acceptance tests.
+The separate [browser suite](BROWSER.md) passed on 10.4.19, 11.5.2, 12.0.0 and 13.3.0 under Viewer with Chrome, the TestData source and a calculated field. It checked a solo PNG and native CSV with the original and doubled values. Versions 10–12 open the Data Inspector by URL. Version 13.3.0 opens the panel menu and selects Inspect, then Data. Browser results apply to this fixture independently of the Prometheus/InfluxDB API matrix.
+
+The API suite uses classic dashboards, the default namespace, one numeric series per successful query and literal UTC windows. Dashboard resource API versions and bundle schema versions are independent. Other patch releases, native dashboard schema v2 layouts, non-default organizations, Grafana Cloud, SSO, Flux, multi-select variables and queries that depend on sibling refIds require separate acceptance tests.
