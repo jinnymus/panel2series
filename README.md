@@ -1,0 +1,21 @@
+# Panel2Series
+
+Export a numeric Grafana panel through its query API and draw an SVG from the saved JSON offline. Python 3.9+ standard library. Docker is needed only for the demo.
+
+## Reproduce the Viewer check
+
+    python3 demo.py example
+    python3 panel2series.py chart example/series.json --out example/chart.svg
+
+The demo starts Grafana 11.5.2 on a random loopback port. A setup account provisions the TestData source, dashboard and reader. The demo checks the reader's Viewer role, runs the exporter with that user's credentials and verifies all three timestamps and values (2, 7, 4). It removes the container before rendering the chart. Use a fresh output directory to preserve existing files.
+
+## Export from an existing instance
+
+Supply GRAFANA_PASSWORD through the environment. The account needs Basic authentication, dashboard read and datasource query access.
+
+    python3 panel2series.py export --url https://grafana.example.org --user reader --uid demo --panel 1 --start 1704067200000 --end 1704067320000 --out series.json
+    python3 panel2series.py chart series.json --out chart.svg
+
+Time boundaries and point timestamps are Unix milliseconds. Schema version 1 contains the requested window, dashboard and panel identifiers, query refId, title, labels, configured panel unit and timestamp/value pairs. A null value breaks the line.
+
+Validated scope: Grafana 11.5.2, TestData CSV Content, one top-level panel with one time column and one numeric column, Basic authentication. The first slice handles static query targets. See [the roadmap](PLAN.md) for additional sources, versions, variable resolution and SSO.

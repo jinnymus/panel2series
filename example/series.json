@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "dashboard": "demo",
+  "panel": 1,
+  "title": "Requests per second",
+  "refId": "A",
+  "window_ms": [
+    1704067200000,
+    1704067320000
+  ],
+  "labels": {},
+  "unit": null,
+  "points": [
+    [
+      1704067200000,
+      2
+    ],
+    [
+      1704067260000,
+      7
+    ],
+    [
+      1704067320000,
+      4
+    ]
+  ]
+}
