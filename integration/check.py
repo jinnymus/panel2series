@@ -38,4 +38,19 @@ for index, (name, kind, address, query) in enumerate([
                    "targets":[{"refId":"A","datasource":ds,**query}]})
 admin("/api/folders", {"uid":"examples","title":"Examples"})
 admin("/api/folders/examples/permissions", {"items":[{"role":"Viewer","permission":1}]})
-admin("/api/dashboards/db", {"folderUid":"examples","dashboard":{"uid":"stores","title":"Stores","schemaVersion":39,"panels":panels}})
+nested = []
+for original in panels:
+    panel = dict(original, id=original["id"]+10)
+    target = original["targets"][0]
+    if original["id"] == 1:
+        expr = 'demo_depth{queue="$queue"}'
+        queries = [{"expr":expr}, {"expr":"demo_depth{"}, {"expr":expr+" * 2"}]
+    else:
+        query = target["query"].replace("WHERE", """WHERE "queue" = '${queue}' AND""") + ' GROUP BY "queue"'
+        queries = [{"query":query}, {"query":"SELECT FROM"}, {"query":query.replace('"value"', '"value" * 2')}]
+    panel["targets"] = [dict(target, **{**query,"refId":ref}) for ref,query in zip("ABC",queries)]
+    nested.append(panel)
+panels.append({"id":20,"type":"row","title":"Nested","collapsed":True,"panels":nested})
+admin("/api/dashboards/db", {"folderUid":"examples","dashboard":{"uid":"stores","title":"Stores","schemaVersion":39,
+      "templating":{"list":[{"type":"custom","name":"queue","query":"other,demo","current":{"text":"other","value":"other"}}]},
+      "panels":panels}})

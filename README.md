@@ -25,3 +25,12 @@ Validated scope: Grafana 11.5.2, TestData CSV Content, one top-level panel with 
 Run `bash integration/run.sh` with Docker Compose, Python 3 and OpenSSL supporting `req -addext`. Pass an output directory as the first argument to keep the generated JSON and SVG elsewhere.
 
 The fixture imports three samples into Prometheus v3.15.1 and inserts a distinct series into InfluxDB 1.8.10. Grafana 11.5.2 joins two internal networks. The exporter joins only the frontend network and authenticates over HTTPS as a Viewer. The test probes both backend IPs from the client network, compares every timestamp and value, and runs each SVG render in a container with networking disabled. The InfluxQL fixture uses a fixed UTC window. All ports remain unpublished and the temporary stack is removed on exit.
+## Nested panels and independent queries
+
+Panel IDs are resolved recursively inside classic row panels. Supply repeated `--var name=value` options to override saved dashboard selections. The supported forms in PromQL and raw InfluxQL are `$name` and `${name}`. This implementation accepts simple scalar identifiers (ASCII letters, digits, underscore and hyphen). Multi-select, All expansion, format modifiers, query-time variable discovery and Grafana built-ins are outside this profile.
+
+For multiple independent targets or templated exports, schema version 2 records the selected variables and one result per refId. Each numeric field keeps its labels and time/value points. The statuses are ok, empty, hidden and error. Inspect the statuses even when the export command succeeds. Server-side expressions depending on sibling refIds require batched execution and are outside this profile.
+
+Run the integration check below to exercise a collapsed row in each datasource. It overrides the saved queue from other to demo, verifies the queue label, checks a failing query B between successful queries A and C, and renders C offline. To redraw a series:
+
+    python3 panel2series.py chart example/stores/influx-multi.json --ref C --series 0 --out /tmp/influx-c.svg

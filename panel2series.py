@@ -4,6 +4,8 @@ import base64
 import json
 import math
 import os
+import re
+from urllib.error import URLError
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -25,15 +27,91 @@ def request(url, user, password, body=None):
         return json.load(response)
 
 
+def find_panel(panels, panel_id):
+    for panel in panels:
+        if panel.get("id") == panel_id:
+            return panel
+        nested = find_panel(panel.get("panels", []), panel_id)
+        if nested is not None:
+            return nested
+
+
+def expand(text, variables):
+    def replace(match):
+        name = match.group(1) or match.group(2)
+        value = variables.get(name)
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+            raise ValueError("Expected a simple scalar value for " + name)
+        return value
+    expanded = re.sub(r"\$\{(\w+)\}|\$(\w+)", replace, text)
+    if "$" in expanded or "[[" in expanded:
+        raise ValueError("Unsupported variable syntax")
+    return expanded
+
+
+def unpack(frames):
+    series = []
+    for frame in frames:
+        fields = frame["schema"]["fields"]
+        columns = frame["data"]["values"]
+        times, = [columns[i] for i,f in enumerate(fields) if f["type"] == "time"]
+        if any(frame["data"].get("entities", [])):
+            raise ValueError("Non-finite frame")
+        for i, field in enumerate(fields):
+            if field["type"] == "number" and times:
+                if len(times) != len(columns[i]):
+                    raise ValueError("Inconsistent column lengths")
+                series.append({"field":field["name"], "labels":field.get("labels", {}),
+                               "points":list(zip(times, columns[i]))})
+    return series
+
+
 def export(args):
     if args.start >= args.end:
         raise ValueError("Expected start < end (Unix milliseconds)")
     def api(path, body=None):
         return request(args.url.rstrip("/") + path, args.user, os.environ["GRAFANA_PASSWORD"], body)
     dashboard = api("/api/dashboards/uid/" + quote(args.uid, safe=""))["dashboard"]
-    panel = next((p for p in dashboard["panels"] if p["id"] == args.panel), None)
-    if not panel or len(panel.get("targets", [])) != 1 or panel.get("transformations"):
-        raise ValueError("Expected a top-level single-query panel without transformations")
+    panel = find_panel(dashboard["panels"], args.panel)
+    if not panel or not panel.get("targets") or panel.get("transformations"):
+        raise ValueError("Expected a query panel without transformations")
+    definitions = dashboard.get("templating", {}).get("list", [])
+    variables = {v["name"]:v.get("current", {}).get("value") for v in definitions}
+    for item in args.var:
+        key, sep, value = item.partition("=")
+        if not sep or key not in variables:
+            raise ValueError("Expected --var declared_name=value")
+        variables[key] = value
+    if len(panel["targets"]) > 1 or "$" in json.dumps(panel["targets"]) or args.var:
+        results = {}
+        for saved in panel["targets"]:
+            ref = saved["refId"]
+            if ref in results:
+                raise ValueError("Duplicate refId")
+            if saved.get("hide"):
+                results[ref] = {"status":"hidden"}
+                continue
+            try:
+                target = dict(saved)
+                target.setdefault("datasource", panel.get("datasource"))
+                for key in ("expr", "query"):
+                    if key in target:
+                        target[key] = expand(target[key], variables)
+                if "$" in json.dumps(target):
+                    raise ValueError("Unsupported target variable")
+                reply = api("/api/ds/query", {"from":str(args.start), "to":str(args.end), "queries":[target]})
+                result = reply["results"][ref]
+                if result.get("error"):
+                    raise ValueError("Datasource rejected query")
+                series = unpack(result.get("frames", []))
+                if any(not args.start <= ts <= args.end for s in series for ts,_ in s["points"]):
+                    raise ValueError("Point outside requested window")
+                results[ref] = {"status":"ok" if series else "empty", "series":series}
+            except (URLError, ValueError, KeyError, IndexError) as error:
+                results[ref] = {"status":"error", "reason":str(error)}
+        return {"schema_version":2, "dashboard":args.uid, "panel":args.panel, "title":panel["title"],
+                "window_ms":[args.start,args.end], "variables":variables,"results":results,
+                "unit":panel.get("fieldConfig", {}).get("defaults", {}).get("unit")}
     target = dict(panel["targets"][0])
     target.setdefault("datasource", panel.get("datasource"))
     if "$" in json.dumps(target) or target.get("hide"):
@@ -89,16 +167,25 @@ def main():
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="cmd", required=True)
     e = commands.add_parser("export")
+    e.add_argument("--var", action="append", default=[])
     for name in ("url", "user", "uid"):
         e.add_argument("--" + name, required=True)
     for name in ("panel", "start", "end"):
         e.add_argument("--" + name, required=True, type=int)
     c = commands.add_parser("chart")
+    c.add_argument("--ref", default="A")
+    c.add_argument("--series", type=int, default=0)
     c.add_argument("input", type=Path)
     for cmd in (c, e):
         cmd.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
-    content = json.dumps(export(args), allow_nan=False, indent=2) if args.cmd == "export" else chart(json.loads(args.input.read_text()))
+    if args.cmd == "export":
+        content = json.dumps(export(args), allow_nan=False, indent=2)
+    else:
+        data = json.loads(args.input.read_text())
+        if data["schema_version"] == 2:
+            data.update(data["results"][args.ref]["series"][args.series])
+        content = chart(data)
     args.out.write_text(content, encoding="utf-8")
 
 

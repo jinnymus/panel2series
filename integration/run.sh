@@ -22,9 +22,9 @@ for i in {1..60}; do
   if dc exec -T influx influx -execute 'CREATE DATABASE demo' >/dev/null 2>&1; then break; fi
   sleep 1
 done
-dc exec -T influx influx -database demo -execute 'INSERT depth value=3 1704067200000000000'
-dc exec -T influx influx -database demo -execute 'INSERT depth value=9 1704067260000000000'
-dc exec -T influx influx -database demo -execute 'INSERT depth value=5 1704067320000000000'
+dc exec -T influx influx -database demo -execute 'INSERT depth,queue=demo value=3 1704067200000000000'
+dc exec -T influx influx -database demo -execute 'INSERT depth,queue=demo value=9 1704067260000000000'
+dc exec -T influx influx -database demo -execute 'INSERT depth,queue=demo value=5 1704067320000000000'
 dc run --rm -e ADMIN_PASSWORD client check.py setup
 ip() { docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(dc ps -q "$1")"; }
 dc run --rm client check.py viewer "$(ip prometheus)" "$(ip influx)"
@@ -32,6 +32,7 @@ i=0
 for source in prometheus influx; do
   i=$((i+1))
   dc run --rm client panel2series.py export --url https://grafana:3000 --user reader --uid stores --panel "$i" --start 1704067200000 --end 1704067320000 --out "/out/$source.json"
+  dc run --rm client panel2series.py export --url https://grafana:3000 --user reader --uid stores --panel "$((10+i))" --var queue=demo --start 1704067200000 --end 1704067320000 --out "/out/$source-multi.json"
 done
 python3 - "$RESULT_DIR" <<'PY'
 import json, sys
@@ -41,7 +42,16 @@ for source, values in [('prometheus',[2,7,4]),('influx',[3,9,5])]:
     expected = [[1704067200000+60000*i,v] for i,v in enumerate(values)]
     if data['points'] != expected:
         raise ValueError((source, expected, data['points']))
+    multi = json.loads((Path(sys.argv[1]) / (source+'-multi.json')).read_text())
+    assert multi['variables']['queue'] == 'demo'
+    results = multi['results']
+    assert results['B']['status'] == 'error', results
+    for ref, factor in [('A',1),('C',2)]:
+        series, = results[ref]['series']
+        assert series['labels']['queue'] == 'demo', series
+        assert series['points'] == [[t,v*factor] for t,v in expected], series
 PY
 for source in prometheus influx; do
   docker run --rm --network none -v "$PWD/../panel2series.py:/app.py:ro" -v "$RESULT_DIR:/out" python:3.10-slim python /app.py chart "/out/$source.json" --out "/out/$source.svg"
+  docker run --rm --network none -v "$PWD/../panel2series.py:/app.py:ro" -v "$RESULT_DIR:/out" python:3.10-slim python /app.py chart "/out/$source-multi.json" --ref C --out "/out/$source-multi.svg"
 done

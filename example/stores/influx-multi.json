@@ -1,0 +1,70 @@
+{
+  "schema_version": 2,
+  "dashboard": "stores",
+  "panel": 12,
+  "title": "influx queue depth",
+  "window_ms": [
+    1704067200000,
+    1704067320000
+  ],
+  "variables": {
+    "queue": "demo"
+  },
+  "results": {
+    "A": {
+      "status": "ok",
+      "series": [
+        {
+          "field": "Value",
+          "labels": {
+            "queue": "demo"
+          },
+          "points": [
+            [
+              1704067200000,
+              3
+            ],
+            [
+              1704067260000,
+              9
+            ],
+            [
+              1704067320000,
+              5
+            ]
+          ]
+        }
+      ]
+    },
+    "B": {
+      "status": "error",
+      "reason": "HTTP Error 400: Bad Request"
+    },
+    "C": {
+      "status": "ok",
+      "series": [
+        {
+          "field": "Value",
+          "labels": {
+            "queue": "demo"
+          },
+          "points": [
+            [
+              1704067200000,
+              6
+            ],
+            [
+              1704067260000,
+              18
+            ],
+            [
+              1704067320000,
+              10
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "unit": null
+}
