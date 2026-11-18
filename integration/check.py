@@ -8,7 +8,9 @@ from panel2series import request
 url = "https://grafana:3000"
 password = os.environ["GRAFANA_PASSWORD"]
 if sys.argv[1] == "viewer":
-    for address, port in zip(sys.argv[2:], (9090, 8086)):
+    version = request(url+"/api/health", "reader", password)["version"]
+    assert version == sys.argv[2], (version, sys.argv[2])
+    for address, port in zip(sys.argv[3:], (9090, 8086)):
         try:
             socket.create_connection((address, port), timeout=2).close()
         except OSError:

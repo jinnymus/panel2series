@@ -27,7 +27,7 @@ dc exec -T influx influx -database demo -execute 'INSERT depth,queue=demo value=
 dc exec -T influx influx -database demo -execute 'INSERT depth,queue=demo value=5 1704067320000000000'
 dc run --rm -e ADMIN_PASSWORD client check.py setup
 ip() { docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(dc ps -q "$1")"; }
-dc run --rm client check.py viewer "$(ip prometheus)" "$(ip influx)"
+dc run --rm client check.py viewer "${GRAFANA_VERSION:-11.5.2}" "$(ip prometheus)" "$(ip influx)"
 i=0
 for source in prometheus influx; do
   i=$((i+1))

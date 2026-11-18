@@ -5,7 +5,7 @@ import json
 import math
 import os
 import re
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -66,12 +66,26 @@ def unpack(frames):
     return series
 
 
+def read_dashboard(api, uid):
+    uid = quote(uid, safe="")
+    for version in ("v1", "v1beta1"):
+        path = f"/apis/dashboard.grafana.app/{version}/namespaces/default/dashboards/{uid}"
+        try:
+            resource = api(path)
+        except HTTPError as error:
+            if error.code in (404, 405):
+                continue
+            raise
+        return resource["spec"], version
+    return api("/api/dashboards/uid/" + uid)["dashboard"], "legacy"
+
+
 def export(args):
     if args.start >= args.end:
         raise ValueError("Expected start < end (Unix milliseconds)")
     def api(path, body=None):
         return request(args.url.rstrip("/") + path, args.user, os.environ["GRAFANA_PASSWORD"], body)
-    dashboard = api("/api/dashboards/uid/" + quote(args.uid, safe=""))["dashboard"]
+    dashboard, dashboard_api = read_dashboard(api, args.uid)
     panel = find_panel(dashboard["panels"], args.panel)
     if not panel or not panel.get("targets") or panel.get("transformations"):
         raise ValueError("Expected a query panel without transformations")
@@ -109,7 +123,7 @@ def export(args):
                 results[ref] = {"status":"ok" if series else "empty", "series":series}
             except (URLError, ValueError, KeyError, IndexError) as error:
                 results[ref] = {"status":"error", "reason":str(error)}
-        return {"schema_version":2, "dashboard":args.uid, "panel":args.panel, "title":panel["title"],
+        return {"schema_version":2, "dashboard_api":dashboard_api, "dashboard":args.uid, "panel":args.panel, "title":panel["title"],
                 "window_ms":[args.start,args.end], "variables":variables,"results":results,
                 "unit":panel.get("fieldConfig", {}).get("defaults", {}).get("unit")}
     target = dict(panel["targets"][0])
@@ -134,7 +148,7 @@ def export(args):
     points = list(zip(times, values))
     if any(not args.start <= ts <= args.end for ts in times):
         raise ValueError("Source returned points outside requested window")
-    return {"schema_version": 1, "dashboard": args.uid, "panel": args.panel, "title": panel["title"],
+    return {"schema_version": 1, "dashboard_api":dashboard_api, "dashboard": args.uid, "panel": args.panel, "title": panel["title"],
             "refId": target["refId"], "window_ms": [args.start, args.end], "labels": fields[v].get("labels", {}),
             "unit": panel.get("fieldConfig", {}).get("defaults", {}).get("unit"), "points": points}
 

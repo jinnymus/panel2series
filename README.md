@@ -18,7 +18,7 @@ Supply GRAFANA_PASSWORD through the environment. The account needs Basic authent
 
 Time boundaries and point timestamps are Unix milliseconds. Schema version 1 contains the requested window, dashboard and panel identifiers, query refId, title, labels, configured panel unit and timestamp/value pairs. A null value breaks the line.
 
-Validated scope: Grafana 11.5.2, TestData CSV Content, one top-level panel with one time column and one numeric column, Basic authentication. The first slice handles static query targets. See [the roadmap](PLAN.md) for additional sources, versions, variable resolution and SSO.
+The quickstart uses TestData CSV Content on Grafana 11.5.2. The [compatibility matrix](COMPATIBILITY.md) covers the separate Prometheus and InfluxDB suite. See [the roadmap](PLAN.md) for planned work.
 
 ## Prometheus and InfluxDB integration check
 
