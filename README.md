@@ -1,5 +1,7 @@
 # Panel2Series
 
+For a human Viewer using OIDC and MFA, or a CI job using a Grafana service account, see [Authentication](AUTH.md).
+
 See [Browser export](BROWSER.md) for transformed panel CSV, PNG, locator overrides and the browser test matrix.
 
 Export a numeric Grafana panel through its query API and draw an SVG from the saved JSON offline. Python 3.9+ standard library. Docker is needed only for the demo.

@@ -17,8 +17,23 @@ Run `bash integration/matrix.sh` from the repository root. Supply a fresh output
 
 Every row uses a Viewer on a separate internal network. The test checks that the two backend TCP ports are unreachable, exports a top-level and nested panel for each source, overrides a scalar variable, compares timestamps, values and queue labels, and checks that invalid query B leaves A and C available. The chart command runs in a container with networking disabled.
 
+## Authentication
+
+The Prometheus/InfluxDB matrix above also passed with Viewer service-account tokens on all eight combinations, including partial query failure, offline rendering and network isolation.
+
+The OIDC suite uses Keycloak 26.2.5, the password and TOTP browser flow, a Grafana Viewer and the bundled TestData source. On each release the SSO request context and the CI bearer token produced identical JSON, including timestamps and the reference values 2, 7 and 4. Two browser processes reused the saved Grafana login and produced matching CSV plus PNG files. The fixture exercises the actual IdP forms with headless Chrome; the interactive login command opens a visible browser.
+
+| Grafana OSS | OIDC + TOTP and browser export | Saved session reuse | Expired login cookie | Viewer CI token export | Expired CI token |
+|---|---|---|---|---|---|
+| 10.4.19 | pass | pass | HTTP 401 | pass | HTTP 401 |
+| 11.5.2 | pass | pass | HTTP 401 | pass | HTTP 401 |
+| 12.0.0 | pass | pass | HTTP 401 | pass | HTTP 401 |
+| 13.3.0 | pass | pass | HTTP 401 | pass | HTTP 401 |
+
+The expiry check presents the original credential after Grafana's configured lifetime. It covers Grafana login expiration and service-account token expiration. IdP single logout, refresh-token rotation, SAML, hardware keys and other IdPs are outside this matrix. The OIDC fixture uses loopback browser endpoints and a Docker back channel. See [setup and reproduction](AUTH.md).
+
 ## Coverage limits
 
 The separate [browser suite](BROWSER.md) passed on 10.4.19, 11.5.2, 12.0.0 and 13.3.0 under Viewer with Chrome, the TestData source and a calculated field. It checked a solo PNG and native CSV with the original and doubled values. Versions 10–12 open the Data Inspector by URL. Version 13.3.0 opens the panel menu and selects Inspect, then Data. Browser results apply to this fixture independently of the Prometheus/InfluxDB API matrix.
 
-The API suite uses classic dashboards, the default namespace, one numeric series per successful query and literal UTC windows. Dashboard resource API versions and bundle schema versions are independent. Other patch releases, native dashboard schema v2 layouts, non-default organizations, Grafana Cloud, SSO, Flux, multi-select variables and queries that depend on sibling refIds require separate acceptance tests.
+The API suite uses classic dashboards, the default namespace, one numeric series per successful query and literal UTC windows. Dashboard resource API versions and bundle schema versions are independent. Other patch releases, native dashboard schema v2 layouts, non-default organizations, Grafana Cloud, Flux, multi-select variables and queries that depend on sibling refIds require separate acceptance tests.

@@ -44,9 +44,13 @@ def capture(args):
     with sync_playwright() as p:
         browser = p.chromium.launch(channel=args.channel)
         ctx = browser.new_context(locale="en-US",timezone_id="UTC",viewport={"width":1200,"height":650})
-        login = ctx.request.post(base+"/login",data={"user":args.user,"password":os.environ["GRAFANA_PASSWORD"]},max_redirects=0)
-        if login.status != 200:
-            raise RuntimeError(f"Grafana login returned HTTP {login.status}")
+        if args.session:
+            from sso_login import restore, save
+            cookie_name = restore(ctx, base, args.session)
+        else:
+            login = ctx.request.post(base+"/login",data={"user":args.user,"password":os.environ["GRAFANA_PASSWORD"]},max_redirects=0)
+            if login.status != 200:
+                raise RuntimeError(f"Grafana login returned HTTP {login.status}")
         version = ctx.request.get(base+"/api/health").json()["version"]
         loc = selectors(version,args.locators)
         # Read the panel definition to decide whether a transform toggle is required.
@@ -90,12 +94,17 @@ def capture(args):
             event.value.save_as(stage/"panel.csv")
             for name in ("panel.csv","panel.png"):
                 (stage/name).replace(args.out/name)
+        if args.session:
+            save(ctx, base, args.session, cookie_name)
         browser.close()
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__)
-    for name in ("url","user","uid"):
+    auth = ap.add_mutually_exclusive_group(required=True)
+    auth.add_argument("--user")
+    auth.add_argument("--session",type=Path)
+    for name in ("url","uid"):
         ap.add_argument("--"+name,required=True)
     for name in ("panel","start","end"):
         ap.add_argument("--"+name,type=int,required=True)

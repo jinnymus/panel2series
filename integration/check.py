@@ -22,6 +22,13 @@ if sys.argv[1] == "viewer":
 def admin(path, data=None):
     return request(url+path, "admin", os.environ["ADMIN_PASSWORD"], data)
 
+if sys.argv[1] == "ci-token":
+    account = admin("/api/serviceaccounts", {"name":"export-ci", "role":"Viewer"})
+    assert account["role"] == "Viewer"
+    # The shell captures stdout directly into the export job environment.
+    print(admin(f"/api/serviceaccounts/{account['id']}/tokens", {"name":"suite","secondsToLive":180})["key"])
+    sys.exit(0)
+
 for attempt in range(60):
     try:
         admin("/api/health")

@@ -5,6 +5,7 @@ import json
 import math
 import os
 import re
+import sys
 from urllib.error import HTTPError, URLError
 from pathlib import Path
 from urllib.parse import quote, urlsplit
@@ -17,11 +18,12 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def request(url, user, password, body=None):
-    if urlsplit(url).scheme != "https" and urlsplit(url).hostname not in ("127.0.0.1", "localhost"):
+def request(url, user, password, body=None, *, token=None):
+    site = urlsplit(url)
+    if site.scheme != "https" and not (site.scheme == "http" and site.hostname in ("127.0.0.1", "localhost")):
         raise ValueError("Use HTTPS for remote Grafana")
-    auth = base64.b64encode(f"{user}:{password}".encode()).decode()
-    req = Request(url, headers={"Authorization": "Basic " + auth, "Content-Type": "application/json"},
+    auth = ("Bearer " + token if token else "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode())
+    req = Request(url, headers={"Authorization": auth, "Content-Type": "application/json"},
                   data=None if body is None else json.dumps(body).encode())
     with build_opener(NoRedirect()).open(req, timeout=20) as response:
         return json.load(response)
@@ -83,8 +85,20 @@ def read_dashboard(api, uid):
 def export(args):
     if args.start >= args.end:
         raise ValueError("Expected start < end (Unix milliseconds)")
+    if args.session:
+        from sso_login import session_api
+        with session_api(args.url,args.session) as api:
+            return export_panel(args,api)
     def api(path, body=None):
-        return request(args.url.rstrip("/") + path, args.user, os.environ["GRAFANA_PASSWORD"], body)
+        token = os.environ["GRAFANA_TOKEN"] if args.token else None
+        if args.token and not token.strip():
+            raise ValueError("GRAFANA_TOKEN is empty")
+        return request(args.url.rstrip("/") + path, args.user,
+                       None if args.token else os.environ["GRAFANA_PASSWORD"], body, token=token)
+    return export_panel(args,api)
+
+
+def export_panel(args, api):
     dashboard, dashboard_api = read_dashboard(api, args.uid)
     panel = find_panel(dashboard["panels"], args.panel)
     if not panel or not panel.get("targets") or panel.get("transformations"):
@@ -122,6 +136,8 @@ def export(args):
                     raise ValueError("Point outside requested window")
                 results[ref] = {"status":"ok" if series else "empty", "series":series}
             except (URLError, ValueError, KeyError, IndexError) as error:
+                if isinstance(error, HTTPError) and error.code == 401:
+                    raise
                 results[ref] = {"status":"error", "reason":str(error)}
         return {"schema_version":2, "dashboard_api":dashboard_api, "dashboard":args.uid, "panel":args.panel, "title":panel["title"],
                 "window_ms":[args.start,args.end], "variables":variables,"results":results,
@@ -182,7 +198,11 @@ def main():
     commands = parser.add_subparsers(dest="cmd", required=True)
     e = commands.add_parser("export")
     e.add_argument("--var", action="append", default=[])
-    for name in ("url", "user", "uid"):
+    auth = e.add_mutually_exclusive_group(required=True)
+    auth.add_argument("--user")
+    auth.add_argument("--session", type=Path, help="Reuse an interactive Grafana login")
+    auth.add_argument("--token", action="store_true", help="Read service account token from GRAFANA_TOKEN")
+    for name in ("url", "uid"):
         e.add_argument("--" + name, required=True)
     for name in ("panel", "start", "end"):
         e.add_argument("--" + name, required=True, type=int)
@@ -204,4 +224,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except HTTPError as error:
+        if error.code == 401:
+            sys.exit("Grafana rejected authentication (HTTP 401). Check the credential and its expiration.")
+        raise

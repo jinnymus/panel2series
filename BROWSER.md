@@ -1,5 +1,7 @@
 # Browser export
 
+For Generic OAuth/OIDC with interactive MFA, use [SSO login and session reuse](AUTH.md).
+
 Install the optional browser dependencies in a Python virtual environment:
 
     pip install -r browser-requirements.txt

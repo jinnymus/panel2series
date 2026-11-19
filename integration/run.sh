@@ -29,10 +29,18 @@ dc run --rm -e ADMIN_PASSWORD client check.py setup
 ip() { docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(dc ps -q "$1")"; }
 dc run --rm client check.py viewer "${GRAFANA_VERSION:-11.5.2}" "$(ip prometheus)" "$(ip influx)"
 i=0
+client=(dc run --rm client)
+auth=(--user reader)
+if [[ ${CHECK_CI_TOKEN:-0} == 1 ]]; then
+  GRAFANA_TOKEN=$(dc run --rm -e ADMIN_PASSWORD client check.py ci-token)
+  export GRAFANA_TOKEN
+  client=(dc run --rm -e GRAFANA_TOKEN -e GRAFANA_PASSWORD= client)
+  auth=(--token)
+fi
 for source in prometheus influx; do
   i=$((i+1))
-  dc run --rm client panel2series.py export --url https://grafana:3000 --user reader --uid stores --panel "$i" --start 1704067200000 --end 1704067320000 --out "/out/$source.json"
-  dc run --rm client panel2series.py export --url https://grafana:3000 --user reader --uid stores --panel "$((10+i))" --var queue=demo --start 1704067200000 --end 1704067320000 --out "/out/$source-multi.json"
+  "${client[@]}" panel2series.py export --url https://grafana:3000 "${auth[@]}" --uid stores --panel "$i" --start 1704067200000 --end 1704067320000 --out "/out/$source.json"
+  "${client[@]}" panel2series.py export --url https://grafana:3000 "${auth[@]}" --uid stores --panel "$((10+i))" --var queue=demo --start 1704067200000 --end 1704067320000 --out "/out/$source-multi.json"
 done
 python3 - "$RESULT_DIR" <<'PY'
 import json, sys
