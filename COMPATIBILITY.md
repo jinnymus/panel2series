@@ -41,3 +41,7 @@ The API suite uses classic dashboards, the default namespace, one numeric series
 ## HTTP jobs and automated reports
 
 The Viewer-token HTTP flow passed on Grafana OSS 10.4.19, 11.5.2, 12.0.0 and 13.3.0 with Prometheus 3.15.1 and InfluxDB 1.8.10. Each run submitted two numeric exports and one comparison, polled their status, downloaded the artifacts and built an offline HTML report. Both sources used the same reference window. The integration check reconciled points and labels, preserved the partial query failure, and verified the mean changes and chart references. Reproduce all four releases with `CHECK_HTTP_API=1 bash integration/matrix.sh /tmp/new-http-matrix`. See the [HTTP API guide](HTTP_API.md).
+
+## Single query returning several series
+
+The TestData Viewer demo checks a plain single-target panel returning two numeric fields. On Grafana 10.4.19, 11.5.2, 12.0.0 and 13.3.0 the export contained both fields (left and right) and all six reference measurements. The existing one-field panel produced a flat v1 archive. The multi-frame case with per-host labels, different field units and a null sample is covered by a Python regression test. Long-form string dimensions are explicitly rejected. Reproduce the real wide-frame case with `GRAFANA_VERSION=13.3.0 python3 demo.py /tmp/new-viewer-demo`.

@@ -4,12 +4,21 @@ For a human Viewer using OIDC and MFA, or a CI job using a Grafana service accou
 
 See [Browser export](BROWSER.md) for transformed panel CSV, PNG, locator overrides and the browser test matrix.
 
-Export a numeric Grafana panel through its query API and draw an SVG from the saved JSON offline. Python 3.9+ standard library. Docker is needed only for the demo.
+Export a numeric Grafana panel through its query API and draw an SVG from the saved JSON offline. Python 3.9+ standard library. Local charting and analysis run without Docker. The integration fixtures use Docker.
+
+## Quickstart
+
+From the checkout run:
+
+    bash integration/quickstart.sh
+
+Requires Python 3, Docker with Compose, and OpenSSL with `req -addext`. The script creates a new output directory and prints its path. Open `stores/http/index.html` for the report built from Viewer HTTP exports, `viewer/chart.svg` for the offline chart, and `known-lag/index.html` for a comparison with a verified four-second delay. For an installation with existing Grafana access see [authentication](AUTH.md). For troubleshooting use the [runbook](RUNBOOK.md).
 
 ## Reproduce the Viewer check
 
-    python3 demo.py example
-    python3 panel2series.py chart example/series.json --out example/chart.svg
+    out=$(mktemp -d)
+    python3 demo.py "$out"
+    python3 panel2series.py chart "$out/series.json" --out "$out/chart.svg"
 
 The demo starts Grafana 11.5.2 on a random loopback port. A setup account provisions the TestData source, dashboard and reader. The demo checks the reader's Viewer role, runs the exporter with that user's credentials and verifies all three timestamps and values (2, 7, 4). It removes the container before rendering the chart. Use a fresh output directory to preserve existing files.
 
@@ -33,7 +42,7 @@ The fixture imports three samples into Prometheus v3.15.1 and inserts a distinct
 
 Panel IDs are resolved recursively inside classic row panels. Supply repeated `--var name=value` options to override saved dashboard selections. The supported forms in PromQL and raw InfluxQL are `$name` and `${name}`. This implementation accepts simple scalar identifiers (ASCII letters, digits, underscore and hyphen). Multi-select, All expansion, format modifiers, query-time variable discovery and Grafana built-ins are outside this profile.
 
-For multiple independent targets or templated exports, schema version 2 records the selected variables and one result per refId. Each numeric field keeps its labels and time/value points. The statuses are ok, empty, hidden and error. Inspect the statuses even when the export command succeeds. Server-side expressions depending on sibling refIds require batched execution and are outside this profile.
+For a single query returning several numeric fields or frames, multiple independent targets, or templated exports, schema version 2 records the selected variables and one result per refId. Each numeric field keeps its name, labels, unit and time/value points. The unit comes from the returned field configuration or the panel default. A plain single-series export retains the flat v1 layout. Older archives may omit field metadata. Long-form frames with string dimension columns require conversion to wide or multi-frame form at the source. The statuses are ok, empty, hidden and error. Inspect the statuses even when the export command succeeds. Server-side expressions depending on sibling refIds require batched execution and are outside this profile.
 
 Run the integration check below to exercise a collapsed row in each datasource. It overrides the saved queue from other to demo, verifies the queue label, checks a failing query B between successful queries A and C, and renders C offline. To redraw a series:
 
