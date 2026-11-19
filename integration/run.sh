@@ -28,6 +28,10 @@ dc exec -T influx influx -database demo -execute 'INSERT depth,queue=demo value=
 dc run --rm -e ADMIN_PASSWORD client check.py setup
 ip() { docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(dc ps -q "$1")"; }
 dc run --rm client check.py viewer "${GRAFANA_VERSION:-11.5.2}" "$(ip prometheus)" "$(ip influx)"
+if [[ ${CHECK_HTTP_API:-0} == 1 ]]; then
+  source http-check.sh
+  exit 0
+fi
 i=0
 client=(dc run --rm client)
 auth=(--user reader)
