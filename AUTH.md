@@ -29,7 +29,7 @@ Create `~/.panel2series/login.json` in the private directory above:
 
 Run `python sso_login.py --config "$HOME/.panel2series/login.json"`. The browser opens Grafana, redirects to your organization’s sign-in page and returns to Grafana after you complete the prompts. The window closes after the command verifies the session. The example writes `~/.panel2series/viewer.json`. Pass that path to either exporter with `--session` as above.
 
-The profile sets defaults for the login command. Supply an individual flag to override its value. Paths in the profile are relative to the profile directory and accept a leading `~`. Set optional `"channel": "chrome"` for an installed Chrome browser. The default uses Playwright Chromium. Passwords, MFA codes and client secrets belong to the identity provider or Grafana. Only the four documented keys are accepted.
+The profile sets defaults for the login command. Supply an individual flag to override its value. Paths in the profile are relative to the profile directory and accept a leading `~`. Set optional `"channel": "chrome"` for an installed Chrome browser. The default uses Playwright Chromium. Passwords, MFA codes and client secrets belong to the identity provider or Grafana. The optional provider key selects oidc (default) or saml. See the [native SAML setup and acceptance record](SAML.md).
 
 ### Configure Grafana and the IdP
 
