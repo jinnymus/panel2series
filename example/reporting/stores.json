@@ -1,0 +1,38 @@
+{
+  "exports": [
+    {
+      "uid": "stores",
+      "panel": 11,
+      "start": 1704067200000,
+      "end": 1704067260000,
+      "variables": {
+        "queue": "demo"
+      }
+    },
+    {
+      "uid": "stores",
+      "panel": 11,
+      "start": 1704067260000,
+      "end": 1704067320000,
+      "variables": {
+        "queue": "demo"
+      }
+    }
+  ],
+  "config": {
+    "step_ms": 60000,
+    "max_lag_steps": 0,
+    "stages": {
+      "window": [
+        0,
+        60001
+      ]
+    },
+    "x": {
+      "refId": "A"
+    },
+    "y": {
+      "refId": "C"
+    }
+  }
+}
