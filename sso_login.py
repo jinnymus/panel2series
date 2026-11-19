@@ -8,7 +8,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlsplit
 from urllib.error import HTTPError
-from playwright.sync_api import sync_playwright
 
 
 def trusted_base(url):
@@ -64,6 +63,7 @@ def restore(ctx, base, path):
 def session_api(base, path):
     base = trusted_base(base)
     cookie = load_cookie(base, path)
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         client = p.request.new_context(storage_state={"cookies":[cookie],"origins":[]})
         try:
@@ -101,13 +101,43 @@ def sign_in(browser, base, path, cookie_name="grafana_session", timeout=300, dri
         ctx.close()
 
 
-if __name__ == "__main__":
+def login_options(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url",required=True)
-    parser.add_argument("--session",type=Path,required=True)
-    parser.add_argument("--cookie-name",default="grafana_session")
+    parser.add_argument("--config", type=Path, help="JSON login settings")
+    parser.add_argument("--url")
+    parser.add_argument("--session", type=Path)
+    parser.add_argument("--cookie-name")
     parser.add_argument("--channel")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    settings = {}
+    if args.config:
+        try:
+            settings = json.loads(args.config.read_text(encoding="utf-8"))
+        except (ValueError, OSError) as exc:
+            parser.error(f"Cannot read login configuration: {exc}")
+        allowed = {"url", "session", "cookie_name", "channel"}
+        if not isinstance(settings, dict) or settings.keys() - allowed:
+            parser.error("Expected a JSON object with url, session, cookie_name or channel")
+        if any(not isinstance(v, str) or not v.strip() for v in settings.values()):
+            parser.error("Login settings must be non-empty strings")
+        if "session" in settings:
+            settings["session"] = args.config.parent / Path(settings["session"]).expanduser()
+    for key, value in settings.items():
+        if getattr(args, key) is None:
+            setattr(args, key, value)
+    if not args.url or not args.session:
+        parser.error("Supply url and session through --config or command-line options")
+    try:
+        args.url = trusted_base(args.url)
+    except ValueError as exc:
+        parser.error(str(exc))
+    args.cookie_name = args.cookie_name or "grafana_session"
+    return args
+
+
+if __name__ == "__main__":
+    args = login_options()
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False,channel=args.channel)
         sign_in(browser,args.url,args.session,args.cookie_name)

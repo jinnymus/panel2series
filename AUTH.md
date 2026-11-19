@@ -15,6 +15,22 @@ Treat the session file as a credential. Keep it in a private directory outside e
 
 If the browser export reports an expired or invalid session, repeat the login command with the same file. The account must have Viewer access to the dashboard and permission to query the datasource. Remote Grafana connections use HTTPS. The test harness uses HTTP on local loopback ports.
 
+### Save a reusable login profile
+
+Create `~/.panel2series/login.json` in the private directory above:
+
+```json
+{
+  "url": "https://grafana.example.org",
+  "session": "viewer.json",
+  "cookie_name": "grafana_session"
+}
+```
+
+Run `python sso_login.py --config "$HOME/.panel2series/login.json"`. The browser opens Grafana, redirects to your organization’s sign-in page and returns to Grafana after you complete the prompts. The window closes after the command verifies the session. The example writes `~/.panel2series/viewer.json`. Pass that path to either exporter with `--session` as above.
+
+The profile sets defaults for the login command. Supply an individual flag to override its value. Paths in the profile are relative to the profile directory and accept a leading `~`. Set optional `"channel": "chrome"` for an installed Chrome browser. The default uses Playwright Chromium. Passwords, MFA codes and client secrets belong to the identity provider or Grafana. Only the four documented keys are accepted.
+
 ### Configure Grafana and the IdP
 
 Register a confidential OIDC client with the exact callback URL `https://grafana.example.org/login/generic_oauth`. Enable authorization code flow, user email claims and MFA in the provider's browser authentication flow. Enable Generic OAuth on Grafana. A minimal configuration for a dedicated test integration is:
