@@ -1,0 +1,19 @@
+{
+  "grafana_image": "grafana/grafana-enterprise:11.5.2",
+  "checks": {
+    "viewer_login": "not run",
+    "export": "not run",
+    "session_reuse": "not run",
+    "browser_export": "not run",
+    "session_expiry": "not run"
+  },
+  "keycloak_idp_issuance": "passed",
+  "server_version": "11.5.2",
+  "edition": "Enterprise",
+  "saml_enabled": false,
+  "valid_license": false,
+  "image_id": "sha256:ebb550e7ed2227a74567daf275f24f33f21234206430bdb40bee90374ae7d2b4",
+  "saml_login_http": 302,
+  "saml_login_redirect_path": "/login",
+  "sp_metadata_http": 302
+}
