@@ -31,3 +31,9 @@ The fixture override in `integration/browser-locators.yaml` is a runnable exampl
     BROWSER_CHANNEL=chrome bash integration/browser-matrix.sh /tmp/browser-evidence
 
 Set PYTHON to the virtual environment interpreter if it is outside PATH. The matrix creates temporary Grafana instances with a Viewer account and deterministic TestData points.
+
+To inspect the effective profile and have Playwright parse each selector in a local blank page, run:
+
+    python locator_doctor.py --version 13.3.0 --locators integration/browser-locators.yaml --channel chrome
+
+Omit --locators to check the built-in profile. The doctor prints the effective key and selector and exits unsuccessfully on a profile or syntax error. Matching a real control requires a browser export against the target instance.
