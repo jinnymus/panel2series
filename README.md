@@ -55,3 +55,7 @@ Run the integration check below to exercise a collapsed row in each datasource. 
 ## Verify a source distribution
 
 Run `bash integration/verify-source.sh /tmp/panel2series-release-001` from a Git checkout with the quickstart prerequisites. Choose a new output directory. The script archives the committed source at HEAD (or the commit supplied as a second argument), unpacks it, runs the Python tests, and exercises the Viewer-to-HTML quickstart from the unpacked tree. On success the directory contains the commit-named tar.gz, verification.log and evidence/stores/http/index.html. On a failed test it preserves the log and available evidence. This command prepares a local distribution candidate. Public release status is recorded in [the project plan](PLAN.md).
+
+## License
+
+Panel2Series source code, documentation and bundled examples are licensed under the [Apache License, Version 2.0](LICENSE). Grafana, Keycloak, the data sources and optional Python packages are obtained separately under their own licenses.
