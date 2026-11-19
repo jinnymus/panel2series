@@ -10,6 +10,9 @@ from urllib.parse import urlsplit
 from urllib.error import HTTPError
 
 
+LOGIN_PATHS = {"oidc": "/login/generic_oauth", "saml": "/login/saml"}
+
+
 def trusted_base(url):
     base = url.rstrip("/")
     site = urlsplit(base)
@@ -80,12 +83,13 @@ def session_api(base, path):
             client.dispose()
 
 
-def sign_in(browser, base, path, cookie_name="grafana_session", timeout=300, drive=None):
+def sign_in(browser, base, path, cookie_name="grafana_session", timeout=300, drive=None, *, provider="oidc"):
     base = trusted_base(base)
+    login_path = LOGIN_PATHS[provider]
     ctx = browser.new_context()
     try:
         page = ctx.new_page()
-        page.goto(base+"/login/generic_oauth",wait_until="domcontentloaded")
+        page.goto(base+login_path,wait_until="domcontentloaded")
         if drive:
             drive(page)
         deadline = time.monotonic()+timeout
@@ -108,6 +112,7 @@ def login_options(argv=None):
     parser.add_argument("--session", type=Path)
     parser.add_argument("--cookie-name")
     parser.add_argument("--channel")
+    parser.add_argument("--provider", choices=LOGIN_PATHS, help="Grafana login provider (default: oidc)")
     args = parser.parse_args(argv)
     settings = {}
     if args.config:
@@ -115,9 +120,9 @@ def login_options(argv=None):
             settings = json.loads(args.config.read_text(encoding="utf-8"))
         except (ValueError, OSError) as exc:
             parser.error(f"Cannot read login configuration: {exc}")
-        allowed = {"url", "session", "cookie_name", "channel"}
+        allowed = {"url", "session", "cookie_name", "channel", "provider"}
         if not isinstance(settings, dict) or settings.keys() - allowed:
-            parser.error("Expected a JSON object with url, session, cookie_name or channel")
+            parser.error("Expected a JSON object with url, session, cookie_name, channel or provider")
         if any(not isinstance(v, str) or not v.strip() for v in settings.values()):
             parser.error("Login settings must be non-empty strings")
         if "session" in settings:
@@ -131,6 +136,9 @@ def login_options(argv=None):
         args.url = trusted_base(args.url)
     except ValueError as exc:
         parser.error(str(exc))
+    args.provider = args.provider or "oidc"
+    if args.provider not in LOGIN_PATHS:
+        parser.error("Expected login provider oidc or saml")
     args.cookie_name = args.cookie_name or "grafana_session"
     return args
 
@@ -140,4 +148,4 @@ if __name__ == "__main__":
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False,channel=args.channel)
-        sign_in(browser,args.url,args.session,args.cookie_name)
+        sign_in(browser,args.url,args.session,args.cookie_name,provider=args.provider)
