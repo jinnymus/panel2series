@@ -1,0 +1,1 @@
+{"step_ms":1000,"max_lag_steps":8,"stages":{"warm":[0,30000],"load":[30000,60000]},"x":{"refId":"A","field":"requests","labels":{"instance":"demo"}},"y":{"refId":"B","field":"queue","labels":{"instance":"demo"}}}

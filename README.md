@@ -38,3 +38,5 @@ For multiple independent targets or templated exports, schema version 2 records 
 Run the integration check below to exercise a collapsed row in each datasource. It overrides the saved queue from other to demo, verifies the queue label, checks a failing query B between successful queries A and C, and renders C offline. To redraw a series:
 
     python3 panel2series.py chart example/stores/influx-multi.json --ref C --series 0 --out /tmp/influx-c.svg
+
+[Офлайн-анализ двух прогонов, ступеней, пропусков и лага](ANALYSIS.md)
