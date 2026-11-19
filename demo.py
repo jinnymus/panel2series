@@ -39,6 +39,8 @@ try:
     setup("/api/folders/examples/permissions", {"items":[{"role":"Viewer","permission":1}]})
     setup("/api/dashboards/db", {"folderUid":"examples","dashboard":{"uid":"demo","title":"Example","schemaVersion":39,"panels":[
         {"id":1,"type":"timeseries","title":"Requests per second","datasource":ds,"targets":[target]},
+        {"id":3,"type":"timeseries","title":"Two metrics","datasource":ds,
+         "targets":[dict(target, csvContent="time,left,right\n2024-01-01T00:00:00Z,2,4\n2024-01-01T00:01:00Z,7,14\n2024-01-01T00:02:00Z,4,8")]},
         {"id":2,"type":"timeseries","title":"Double depth","datasource":ds,"targets":[target],
          "gridPos":{"x":0,"y":8,"w":12,"h":8},
          "transformations":[{"id":"calculateField","options":{"mode":"binary","alias":"double_depth",
@@ -50,6 +52,15 @@ try:
         "--start",str(start),"--end",str(start+120000),"--out",str(out/"series.json")], check=True,
         env={**os.environ,"GRAFANA_PASSWORD":password})
     assert json.loads((out/"series.json").read_text())["points"] == [[start,2],[start+60000,7],[start+120000,4]]
+    subprocess.run(cli + ["export","--url",url,"--user","reader","--uid","demo","--panel","3",
+        "--start",str(start),"--end",str(start+120000),"--out",str(out/"multi.json")], check=True,
+        env={**os.environ,"GRAFANA_PASSWORD":password})
+    archive = json.loads((out/"multi.json").read_text())
+    assert archive["schema_version"] == 2
+    series = archive["results"]["A"]["series"]
+    assert [s["field"] for s in series] == ["left", "right"], series
+    for item, values in zip(series, ([2,7,4], [4,14,8])):
+        assert item["points"] == [[start + n*60000,v] for n,v in enumerate(values)]
     if os.getenv("BROWSER_CHECK") == "1":
         import csv
         import struct

@@ -51,20 +51,27 @@ def expand(text, variables):
     return expanded
 
 
-def unpack(frames):
+def unpack(frames, panel_unit=None):
     series = []
     for frame in frames:
         fields = frame["schema"]["fields"]
         columns = frame["data"]["values"]
-        times, = [columns[i] for i,f in enumerate(fields) if f["type"] == "time"]
+        if len(fields) != len(columns):
+            raise ValueError("Inconsistent frame column count")
+        if any(field["type"] == "string" for field in fields):
+            raise ValueError("String dimension columns require a wide or multi-frame time series")
+        times, = [columns[i] for i, field in enumerate(fields) if field["type"] == "time"]
         if any(frame["data"].get("entities", [])):
             raise ValueError("Non-finite frame")
         for i, field in enumerate(fields):
-            if field["type"] == "number" and times:
+            if field["type"] == "number":
                 if len(times) != len(columns[i]):
                     raise ValueError("Inconsistent column lengths")
-                series.append({"field":field["name"], "labels":field.get("labels", {}),
-                               "points":list(zip(times, columns[i]))})
+                if times:
+                    unit = field.get("config", {}).get("unit")
+                    series.append({"field": field["name"], "labels": field.get("labels", {}),
+                                   "unit": unit if unit is not None else panel_unit,
+                                   "points": list(zip(times, columns[i]))})
     return series
 
 
@@ -110,63 +117,48 @@ def export_panel(args, api):
         if not sep or key not in variables:
             raise ValueError("Expected --var declared_name=value")
         variables[key] = value
-    if len(panel["targets"]) > 1 or "$" in json.dumps(panel["targets"]) or args.var:
-        results = {}
-        for saved in panel["targets"]:
-            ref = saved["refId"]
-            if ref in results:
-                raise ValueError("Duplicate refId")
-            if saved.get("hide"):
-                results[ref] = {"status":"hidden"}
-                continue
-            try:
-                target = dict(saved)
-                target.setdefault("datasource", panel.get("datasource"))
-                for key in ("expr", "query"):
-                    if key in target:
-                        target[key] = expand(target[key], variables)
-                if "$" in json.dumps(target):
-                    raise ValueError("Unsupported target variable")
-                reply = api("/api/ds/query", {"from":str(args.start), "to":str(args.end), "queries":[target]})
-                result = reply["results"][ref]
-                if result.get("error"):
-                    raise ValueError("Datasource rejected query")
-                series = unpack(result.get("frames", []))
-                if any(not args.start <= ts <= args.end for s in series for ts,_ in s["points"]):
-                    raise ValueError("Point outside requested window")
-                results[ref] = {"status":"ok" if series else "empty", "series":series}
-            except (URLError, ValueError, KeyError, IndexError) as error:
-                if isinstance(error, HTTPError) and error.code == 401:
-                    raise
-                results[ref] = {"status":"error", "reason":str(error)}
-        return {"schema_version":2, "dashboard_api":dashboard_api, "dashboard":args.uid, "panel":args.panel, "title":panel["title"],
-                "window_ms":[args.start,args.end], "variables":variables,"results":results,
-                "unit":panel.get("fieldConfig", {}).get("defaults", {}).get("unit")}
-    target = dict(panel["targets"][0])
-    target.setdefault("datasource", panel.get("datasource"))
-    if "$" in json.dumps(target) or target.get("hide"):
-        raise ValueError("Hidden or templated targets are unsupported")
-    reply = api("/api/ds/query", {"from": str(args.start), "to": str(args.end), "queries": [target]})
-    result = reply["results"][target["refId"]]
-    if result.get("error") or len(result.get("frames", [])) != 1:
-        raise ValueError("Expected one successful frame")
-    frame = result["frames"][0]
-    fields = frame["schema"]["fields"]
-    def col(kind):
-        indices = [i for i, field in enumerate(fields) if field["type"] == kind]
-        if len(indices) != 1:
-            raise ValueError("Expected exactly one " + kind + " column")
-        return indices[0]
-    t, v = col("time"), col("number")
-    times, values = [frame["data"]["values"][i] for i in (t, v)]
-    if not times or len(times) != len(values) or any(frame["data"].get("entities", [])):
-        raise ValueError("Empty, inconsistent or non-finite frame")
-    points = list(zip(times, values))
-    if any(not args.start <= ts <= args.end for ts in times):
-        raise ValueError("Source returned points outside requested window")
-    return {"schema_version": 1, "dashboard_api":dashboard_api, "dashboard": args.uid, "panel": args.panel, "title": panel["title"],
-            "refId": target["refId"], "window_ms": [args.start, args.end], "labels": fields[v].get("labels", {}),
-            "unit": panel.get("fieldConfig", {}).get("defaults", {}).get("unit"), "points": points}
+    targets = panel["targets"]
+    simple = len(targets) == 1 and "$" not in json.dumps(targets) and not args.var
+    panel_unit = panel.get("fieldConfig", {}).get("defaults", {}).get("unit")
+    metadata = {"dashboard_api": dashboard_api, "dashboard": args.uid, "panel": args.panel,
+                "title": panel["title"], "window_ms": [args.start, args.end]}
+    results = {}
+    for saved in targets:
+        ref = saved["refId"]
+        if ref in results:
+            raise ValueError("Duplicate refId")
+        if saved.get("hide"):
+            if simple:
+                raise ValueError("Hidden target is unsupported")
+            results[ref] = {"status": "hidden"}
+            continue
+        try:
+            target = dict(saved)
+            target.setdefault("datasource", panel.get("datasource"))
+            for key in ("expr", "query"):
+                if key in target and not simple:
+                    target[key] = expand(target[key], variables)
+            if "$" in json.dumps(target):
+                raise ValueError("Unsupported target variable")
+            reply = api("/api/ds/query", {"from": str(args.start), "to": str(args.end), "queries": [target]})
+            result = reply["results"][ref]
+            if result.get("error"):
+                raise ValueError("Datasource rejected query")
+            series = unpack(result.get("frames", []), panel_unit)
+            if any(not args.start <= ts <= args.end for item in series for ts, _ in item["points"]):
+                raise ValueError("Point outside requested window")
+            if simple:
+                if not series:
+                    raise ValueError("Expected a nonempty time series")
+                if len(series) == 1:
+                    return {"schema_version": 1, **metadata, "refId": ref, **series[0],
+                            "panel_unit": panel_unit}
+            results[ref] = {"status": "ok" if series else "empty", "series": series}
+        except (URLError, ValueError, KeyError, IndexError) as error:
+            if simple or isinstance(error, HTTPError) and error.code == 401:
+                raise
+            results[ref] = {"status": "error", "reason": str(error)}
+    return {"schema_version": 2, **metadata, "variables": variables, "results": results, "unit": panel_unit}
 
 
 def chart(data):
@@ -186,8 +178,11 @@ def chart(data):
         lines.append(f'{"M" if move else "L"}{x:.2f} {h:.2f}')
         dots.append(f'<circle cx="{x}" cy="{h}" r="3" fill="steelblue"/>')
         move = False
+    legend = " ".join(filter(None, [data.get("field"), json.dumps(data["labels"], ensure_ascii=False,
+                      sort_keys=True) if data.get("labels") else "", data.get("unit")]))
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260"><rect width="800" height="260" fill="white"/>'
-            f'<text x="80" y="30">{escape(data["title"])}</text><text x="5" y="63">{hi:g}</text>'
+            f'<text x="80" y="25">{escape(data["title"])}</text><text x="80" y="46">{escape(legend)}</text>'
+            f'<text x="5" y="63">{hi:g}</text>'
             f'<text x="5" y="213">{lo:g}</text><text x="80" y="245">0 s</text>'
             f'<text x="700" y="245">{(end-start)/1000:g} s</text>'
             f'<path d="{" ".join(lines)}" fill="none" stroke="steelblue"/>{"".join(dots)}</svg>')
@@ -207,7 +202,7 @@ def main():
     for name in ("panel", "start", "end"):
         e.add_argument("--" + name, required=True, type=int)
     c = commands.add_parser("chart")
-    c.add_argument("--ref", default="A")
+    c.add_argument("--ref", help="Query refId (defaults to A or the first successful query)")
     c.add_argument("--series", type=int, default=0)
     c.add_argument("input", type=Path)
     for cmd in (c, e):
@@ -218,7 +213,15 @@ def main():
     else:
         data = json.loads(args.input.read_text())
         if data["schema_version"] == 2:
-            data.update(data["results"][args.ref]["series"][args.series])
+            results = data["results"]
+            ref = args.ref
+            if ref is None:
+                ref = "A" if results.get("A", {}).get("status") == "ok" else next(
+                    (key for key, result in results.items() if result.get("status") == "ok"), None)
+            series = results.get(ref, {}).get("series", [])
+            if not 0 <= args.series < len(series):
+                parser.error("No matching series. Check the query status, --ref and --series.")
+            data.update(series[args.series])
         content = chart(data)
     args.out.write_text(content, encoding="utf-8")
 
