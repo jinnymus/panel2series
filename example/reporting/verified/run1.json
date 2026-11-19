@@ -1,0 +1,72 @@
+{
+  "schema_version": 2,
+  "dashboard_api": "legacy",
+  "dashboard": "stores",
+  "panel": 11,
+  "title": "prometheus queue depth",
+  "window_ms": [
+    1704067200000,
+    1704067320000
+  ],
+  "variables": {
+    "queue": "demo"
+  },
+  "results": {
+    "A": {
+      "status": "ok",
+      "series": [
+        {
+          "field": "demo_depth",
+          "labels": {
+            "__name__": "demo_depth",
+            "queue": "demo"
+          },
+          "points": [
+            [
+              1704067200000,
+              2
+            ],
+            [
+              1704067260000,
+              7
+            ],
+            [
+              1704067320000,
+              4
+            ]
+          ]
+        }
+      ]
+    },
+    "B": {
+      "status": "error",
+      "reason": "HTTP Error 400: Bad Request"
+    },
+    "C": {
+      "status": "ok",
+      "series": [
+        {
+          "field": "Value",
+          "labels": {
+            "queue": "demo"
+          },
+          "points": [
+            [
+              1704067200000,
+              4
+            ],
+            [
+              1704067260000,
+              14
+            ],
+            [
+              1704067320000,
+              8
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "unit": null
+}

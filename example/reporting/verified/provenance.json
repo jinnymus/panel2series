@@ -1,0 +1,45 @@
+{
+  "exports": [
+    "c8dfe1c29b144f27922c6d880e2e8304",
+    "bb34930360b8442193889fba7ce628ea"
+  ],
+  "analysis": "d142cbd4b1224919ac6ae47d1f498ef7",
+  "plan": {
+    "exports": [
+      {
+        "uid": "stores",
+        "panel": 11,
+        "start": 1704067200000,
+        "end": 1704067320000,
+        "variables": {
+          "queue": "demo"
+        }
+      },
+      {
+        "uid": "stores",
+        "panel": 12,
+        "start": 1704067200000,
+        "end": 1704067320000,
+        "variables": {
+          "queue": "demo"
+        }
+      }
+    ],
+    "config": {
+      "step_ms": 60000,
+      "max_lag_steps": 1,
+      "stages": {
+        "window": [
+          0,
+          120001
+        ]
+      },
+      "x": {
+        "refId": "A"
+      },
+      "y": {
+        "refId": "C"
+      }
+    }
+  }
+}

@@ -37,3 +37,7 @@ The expiry check presents the original credential after Grafana's configured lif
 The separate [browser suite](BROWSER.md) passed on 10.4.19, 11.5.2, 12.0.0 and 13.3.0 under Viewer with Chrome, the TestData source and a calculated field. It checked a solo PNG and native CSV with the original and doubled values. Versions 10–12 open the Data Inspector by URL. Version 13.3.0 opens the panel menu and selects Inspect, then Data. Browser results apply to this fixture independently of the Prometheus/InfluxDB API matrix.
 
 The API suite uses classic dashboards, the default namespace, one numeric series per successful query and literal UTC windows. Dashboard resource API versions and bundle schema versions are independent. Other patch releases, native dashboard schema v2 layouts, non-default organizations, Grafana Cloud, Flux, multi-select variables and queries that depend on sibling refIds require separate acceptance tests.
+
+## HTTP jobs and automated reports
+
+The Viewer-token HTTP flow passed on Grafana OSS 10.4.19, 11.5.2, 12.0.0 and 13.3.0 with Prometheus 3.15.1 and InfluxDB 1.8.10. Each run submitted two numeric exports and one comparison, polled their status, downloaded the artifacts and built an offline HTML report. Both sources used the same reference window. The integration check reconciled points and labels, preserved the partial query failure, and verified the mean changes and chart references. Reproduce all four releases with `CHECK_HTTP_API=1 bash integration/matrix.sh /tmp/new-http-matrix`. See the [HTTP API guide](HTTP_API.md).

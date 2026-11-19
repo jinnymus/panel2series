@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 350">
+<rect width="800" height="350" fill="white"/>
+<g font-family="sans-serif" font-size="13" fill="#192c41">
+<text x="75" y="28">x · </text>
+<text x="75" y="50">Metric value</text>
+<text x="345" y="333">Elapsed time (ms)</text>
+<path d="M75 276.0h665" stroke="#d8dfe5"/>
+<text x="6" y="280.0">2</text>
+<text x="72.0" y="298">0</text>
+<path d="M75 223.5h665" stroke="#d8dfe5"/>
+<text x="6" y="227.5">3.75</text>
+<text x="238.25" y="298">30000</text>
+<path d="M75 171.0h665" stroke="#d8dfe5"/>
+<text x="6" y="175.0">5.5</text>
+<text x="404.5" y="298">60000</text>
+<path d="M75 118.5h665" stroke="#d8dfe5"/>
+<text x="6" y="122.5">7.25</text>
+<text x="570.75" y="298">90000</text>
+<path d="M75 66.0h665" stroke="#d8dfe5"/>
+<text x="6" y="70.0">9</text>
+<text x="737.0" y="298">1.2e+05</text>
+<text x="440" y="48">Run 1</text>
+<path d="M415 44h18" stroke="#2065a6" stroke-width="3"/>
+<circle cx="75.00" cy="276.00" r="2.3" fill="#2065a6"/>
+<path d="M75.00 276.00 L407.50 126.00" stroke="#2065a6" fill="none"/>
+<circle cx="407.50" cy="126.00" r="2.3" fill="#2065a6"/>
+<path d="M407.50 126.00 L740.00 216.00" stroke="#2065a6" fill="none"/>
+<circle cx="740.00" cy="216.00" r="2.3" fill="#2065a6"/>
+<text x="600" y="48">Run 2</text>
+<path d="M575 44h18" stroke="#b94722" stroke-width="3"/>
+<circle cx="75.00" cy="246.00" r="2.3" fill="#b94722"/>
+<path d="M75.00 246.00 L407.50 66.00" stroke="#b94722" fill="none"/>
+<circle cx="407.50" cy="66.00" r="2.3" fill="#b94722"/>
+<path d="M407.50 66.00 L740.00 186.00" stroke="#b94722" fill="none"/>
+<circle cx="740.00" cy="186.00" r="2.3" fill="#b94722"/>
+</g></svg>

@@ -40,3 +40,5 @@ Run the integration check below to exercise a collapsed row in each datasource. 
     python3 panel2series.py chart example/stores/influx-multi.json --ref C --series 0 --out /tmp/influx-c.svg
 
 [Офлайн-анализ двух прогонов, ступеней, пропусков и лага](ANALYSIS.md)
+
+[HTTP API заданий, report builder и авторепорт](HTTP_API.md)
