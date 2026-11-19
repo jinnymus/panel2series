@@ -6,6 +6,8 @@ See [Browser export](BROWSER.md) for transformed panel CSV, PNG, locator overrid
 
 Export a numeric Grafana panel through its query API and draw an SVG from the saved JSON offline. Python 3.9+ standard library. Local charting and analysis run without Docker. The integration fixtures use Docker.
 
+[Visual walkthrough: Grafana panel, export flow and offline report](docs/WALKTHROUGH.md)
+
 ## Quickstart
 
 From the checkout run:
