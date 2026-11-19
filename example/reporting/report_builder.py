@@ -26,6 +26,17 @@ def build(directory):
     sections = []
     for index, run in enumerate(analysis["runs"], 1):
         sections.append(f"<h2>Run {index}</h2>")
+        archive = directory / f"run{index}.json"
+        if archive.is_file():
+            source = json.loads(archive.read_text(encoding="utf-8"))
+            title = escape(source.get("title", "Panel"))
+            sections.append(f'<p><a href="{archive.name}">{title}</a></p>')
+            sections.append(table(["Dashboard", "Panel", "From (Unix ms)", "To (Unix ms)"],
+                                  [[source["dashboard"], source["panel"], *source["window_ms"]]]))
+            issues = [[ref, item["status"]] for ref, item in source.get("results", {}).items()
+                      if item["status"] != "ok"]
+            if issues:
+                sections.append(table(["Query", "Export status"], issues))
         rows = []
         for stage, metrics in run["stages"].items():
             for name, stats in metrics.items():
